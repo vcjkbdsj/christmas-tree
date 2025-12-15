@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>🎄 圣诞快乐</title>
+    <style>
+        body { margin: 0; overflow: hidden; background-color: #050505; font-family: sans-serif; }
+        #canvas-container { width: 100%; height: 100%; }
+        #tips {
+            position: absolute; bottom: 10%; width: 100%; text-align: center;
+            color: rgba(255,255,255,0.9); pointer-events: none; font-size: 16px;
+            text-shadow: 0 0 5px rgba(0,0,0,0.8); animation: pulse 2s infinite;
+        }
+        @keyframes pulse { 0% { opacity: 0.6; } 50% { opacity: 1; } 100% { opacity: 0.6; } }
+    </style>
+    <script src="https://cdn.bootcdn.net/ajax/libs/three.js/r128/three.min.js"></script>
+</head>
+<body>
+
+    <div id="tips">✨ 手指上下滑动缩放，左右滑动旋转 ✨</div>
+    <div id="canvas-container"></div>
+
+    <script>
+        // --- 初始化场景 ---
+        const container = document.getElementById('canvas-container');
+        const scene = new THREE.Scene();
+        scene.fog = new THREE.FogExp2(0x050505, 0.05);
+
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        camera.position.z = 5;
+        camera.position.y = 1;
+
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(window.devicePixelRatio); // 适配高清屏
+        container.appendChild(renderer.domElement);
+
+        // --- 灯光 ---
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.4);
+        scene.add(ambientLight);
+        const pointLight = new THREE.PointLight(0xffd700, 1.2, 20);
+        pointLight.position.set(2, 5, 3);
+        scene.add(pointLight);
+
+        // --- 圣诞树主体 ---
+        const treeGroup = new THREE.Group();
+        scene.add(treeGroup);
+
+        // 树叶
+        const leafMaterial = new THREE.MeshStandardMaterial({ 
+            color: 0x0f5f0f, 
+            roughness: 0.4,
+            metalness: 0.1
+        });
+        for (let i = 0; i < 4; i++) {
+            const size = 1.6 - i * 0.35;
+            const cone = new THREE.Mesh(new THREE.ConeGeometry(size, 1.4, 32), leafMaterial);
+            cone.position.y = i * 0.9 + 0.5;
+            treeGroup.add(cone);
+        }
+
+        // 树干
+        const trunk = new THREE.Mesh(
+            new THREE.CylinderGeometry(0.3, 0.3, 1, 32),
+            new THREE.MeshStandardMaterial({ color: 0x5c4033 })
+        );
+        trunk.position.y = -0.5;
+        treeGroup.add(trunk);
+
+        // 顶端星星
+        const star = new THREE.Mesh(
+            new THREE.OctahedronGeometry(0.25),
+            new THREE.MeshBasicMaterial({ color: 0xffeb3b })
+        );
+        star.position.y = 4.0;
+        treeGroup.add(star);
+        
+        // 发光辉光 (模拟)
+        const glow = new THREE.Mesh(
+            new THREE.SphereGeometry(0.4, 16, 16),
+            new THREE.MeshBasicMaterial({ color: 0xffeb3b, transparent: true, opacity: 0.3 })
+        );
+        glow.position.y = 4.0;
+        treeGroup.add(glow);
+
+        // 装饰彩球
+        const colors = [0xff0000, 0x00aaff, 0xffd700, 0xffffff];
+        for(let i=0; i<25; i++) {
+            const ball = new THREE.Mesh(
+                new THREE.SphereGeometry(0.08, 16, 16),
+                new THREE.MeshPhongMaterial({ color: colors[Math.floor(Math.random()*colors.length)], shininess: 100 })
+            );
+            const angle = Math.random() * Math.PI * 2;
+            const height = Math.random() * 3.2 + 0.2; 
+            const radius = (1.5 - height/3.5) * 1.1; 
+            ball.position.set(Math.cos(angle)*radius, height, Math.sin(angle)*radius);
+            treeGroup.add(ball);
+        }
+
+        // --- 雪花粒子系统 ---
+        const snowGeo = new THREE.BufferGeometry();
+        const snowCount = 600;
+        const posArray = new Float32Array(snowCount * 3);
+        const velArray = new Float32Array(snowCount); // 下落速度
+
+        for(let i=0; i<snowCount; i++) {
+            posArray[i*3] = (Math.random() - 0.5) * 20;     // x
+            posArray[i*3+1] = (Math.random() - 0.5) * 20;   // y
+            posArray[i*3+2] = (Math.random() - 0.5) * 20;   // z
+            velArray[i] = Math.random() * 0.05 + 0.02;      // 随机速度
+        }
+        snowGeo.setAttribute('position', new THREE.BufferAttribute(posArray, 3));
+        
+        const snowMat = new THREE.PointsMaterial({ size: 0.08, color: 0xffffff, transparent: true, opacity: 0.8 });
+        const snowSystem = new THREE.Points(snowGeo, snowMat);
+        scene.add(snowSystem);
+
+        // --- 交互逻辑 (替代原来的手势) ---
+        let isDragging = false;
+        let previousMousePosition = { x: 0, y: 0 };
+        let targetRotationY = 0;
+        let targetPositionZ = 5;
+
+        // 触摸/鼠标事件监听
+        document.addEventListener('touchstart', onTouchStart, {passive: false});
+        document.addEventListener('touchmove', onTouchMove, {passive: false});
+
+        function onTouchStart(e) {
+            isDragging = true;
+            previousMousePosition = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+        }
+
+        function onTouchMove(e) {
+            if (!isDragging) return;
+            e.preventDefault(); // 防止页面滚动
+
+            const deltaX = e.touches[0].clientX - previousMousePosition.x;
+            const deltaY = e.touches[0].clientY - previousMousePosition.y;
+
+            // 左右滑动 -> 旋转
+            targetRotationY += deltaX * 0.005;
+            
+            // 上下滑动 -> 缩放 (改变相机距离)
+            targetPositionZ += deltaY * 0.01;
+            // 限制缩放范围
+            if(targetPositionZ < 2) targetPositionZ = 2;
+            if(targetPositionZ > 10) targetPositionZ = 10;
+
+            previousMousePosition = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+        }
+
+        // --- 动画循环 ---
+        function animate() {
+            requestAnimationFrame(animate);
+
+            // 1. 树的自转 (带有惯性效果)
+            treeGroup.rotation.y += 0.003; // 基础自转
+            treeGroup.rotation.y += (targetRotationY - treeGroup.rotation.y) * 0.1; // 触摸旋转插值
+
+            // 2. 相机缩放平滑过渡
+            camera.position.z += (targetPositionZ - camera.position.z) * 0.1;
+
+            // 3. 星星闪烁
+            star.rotation.y += 0.02;
+            glow.scale.setScalar(1 + Math.sin(Date.now() * 0.003) * 0.1);
+
+            // 4. 雪花下落
+            const positions = snowSystem.geometry.attributes.position.array;
+            for(let i=0; i<snowCount; i++) {
+                positions[i*3+1] -= velArray[i]; // Y轴下降
+                if (positions[i*3+1] < -10) {
+                    positions[i*3+1] = 10; // 循环回到顶部
+                }
+            }
+            snowSystem.geometry.attributes.position.needsUpdate = true;
+
+            renderer.render(scene, camera);
+        }
+        animate();
+
+        // 窗口自适应
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+    </script>
+</body>
+</html>

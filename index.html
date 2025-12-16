@@ -3,180 +3,226 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>✨ 梦幻粒子圣诞树</title>
+    <title>🎄 MERRY CHRISTMAS</title>
     <style>
-        /* 背景使用深邃的渐变色 */
-        body { margin: 0; overflow: hidden; background: radial-gradient(circle at center, #0a0a2a 0%, #000000 100%); font-family: sans-serif; }
+        /* 背景使用深邃的蓝黑渐变，模仿夜空 */
+        body { margin: 0; overflow: hidden; background: radial-gradient(circle at center, #1a1a3a 0%, #000000 100%); font-family: "Times New Roman", serif; }
         #canvas-container { width: 100%; height: 100%; }
-        #tips {
-            position: absolute; bottom: 15%; width: 100%; text-align: center;
-            color: rgba(100, 255, 218, 0.8); pointer-events: none; font-size: 15px; letter-spacing: 2px;
-            text-shadow: 0 0 10px rgba(100, 255, 218, 0.5); animation: pulse 3s infinite ease-in-out;
+        
+        /* 顶部金色文字 */
+        #title {
+            position: absolute; top: 8%; width: 100%; text-align: center;
+            color: #ffd700; font-size: 24px; letter-spacing: 3px; font-weight: bold;
+            text-shadow: 0 2px 5px rgba(0,0,0,0.5); pointer-events: none;
+            font-family: 'Times New Roman', Times, serif;
         }
-        @keyframes pulse { 0%, 100% { opacity: 0.5; transform: scale(1); } 50% { opacity: 1; transform: scale(1.05); } }
+        /* 底部操作提示 */
+        #tips {
+            position: absolute; bottom: 10%; width: 100%; text-align: center;
+            color: rgba(255, 215, 0, 0.6); pointer-events: none; font-size: 14px; letter-spacing: 1px;
+        }
     </style>
     <script src="https://cdn.bootcdn.net/ajax/libs/three.js/r128/three.min.js"></script>
 </head>
 <body>
 
-    <div id="tips">滑动指尖 点亮星辰</div>
+    <div id="title">MERRY CHRISTMAS</div>
+    <div id="tips">轻触屏幕聚集/散开 | 滑动旋转</div>
     <div id="canvas-container"></div>
 
     <script>
-        // --- 1. 初始化场景 ---
+        // Let's do this! 还原那个酷炫的效果。
+
+        // --- 1. 场景初始化 ---
         const container = document.getElementById('canvas-container');
         const scene = new THREE.Scene();
-        // 去掉雾气，让粒子更通透
-        
-        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-        // 相机初始位置
-        let targetPositionZ = 6; camera.position.z = targetPositionZ; camera.position.y = 2;
+        // 添加少许环境雾气，增加深度感
+        scene.fog = new THREE.FogExp2(0x000000, 0.02);
+
+        const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
+        let targetPositionZ = 12; camera.position.z = targetPositionZ; camera.position.y = 2;
 
         const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
         renderer.setSize(window.innerWidth, window.innerHeight);
-        renderer.setPixelRatio(window.devicePixelRatio);
-        // 【关键】开启叠加混合模式支持，让粒子发光
-        renderer.autoClearColor = false;
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        // 开启阴影支持，更有立体感
+        renderer.shadowMap.enabled = true;
         container.appendChild(renderer.domElement);
 
-        const mainGroup = new THREE.Group();
-        scene.add(mainGroup);
+        // --- 2. 灯光系统 (让金属球闪闪发光) ---
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.3);
+        scene.add(ambientLight);
 
-        // --- 2. 核心：生成粒子树 ---
+        // 主光源（暖金色）
+        const mainLight = new THREE.PointLight(0xffd700, 1.5, 30);
+        mainLight.position.set(5, 10, 5);
+        mainLight.castShadow = true;
+        scene.add(mainLight);
         
-        // 函数：创建一个粒子系统
-        function createParticleSystem(count, color, size, blendingOpts, shapeFn) {
-            const geometry = new THREE.BufferGeometry();
-            const positions = new Float32Array(count * 3);
-            
-            for (let i = 0; i < count; i++) {
-                const coords = shapeFn(i, count);
-                positions[i * 3] = coords.x;
-                positions[i * 3 + 1] = coords.y;
-                positions[i * 3 + 2] = coords.z;
+        // 补光（冷色调，增加对比）
+        const fillLight = new THREE.PointLight(0x4444ff, 0.8, 20);
+        fillLight.position.set(-5, 2, -5);
+        scene.add(fillLight);
+
+        // --- 3. 材质准备 ---
+        // 金色金属材质
+        const goldMat = new THREE.MeshStandardMaterial({ color: 0xffd700, metalness: 0.9, roughness: 0.1 });
+        // 红色金属材质
+        const redMat = new THREE.MeshStandardMaterial({ color: 0xdd0000, metalness: 0.8, roughness: 0.2 });
+        // 顶部钻石材质 (发光)
+        const diamondMat = new THREE.MeshPhongMaterial({ color: 0xffff00, emissive: 0x333300, shininess: 100, transparent: true, opacity: 0.9 });
+
+        // --- 4. 创建装饰品对象 ---
+        const decosGroup = new THREE.Group();
+        scene.add(decosGroup);
+        const allDecos = []; // 存放所有装饰品的数组
+
+        // 几何体复用
+        const sphereGeo = new THREE.SphereGeometry(1, 16, 16);
+        const boxGeo = new THREE.BoxGeometry(1, 1, 1);
+        
+        const totalDecos = 500; // 装饰品总数
+
+        for (let i = 0; i < totalDecos; i++) {
+            let mesh;
+            // 随机组合：70%是球，30%是礼物盒
+            if (Math.random() > 0.3) {
+                // 球体，随机分配金/红材质
+                mesh = new THREE.Mesh(sphereGeo, Math.random() > 0.5 ? goldMat : redMat);
+                const scale = Math.random() * 0.2 + 0.1; // 大小随机
+                mesh.scale.set(scale, scale, scale);
+            } else {
+                // 礼物盒
+                mesh = new THREE.Mesh(boxGeo, Math.random() > 0.5 ? goldMat : redMat);
+                const scale = Math.random() * 0.25 + 0.15;
+                mesh.scale.set(scale, scale, scale);
+                mesh.rotation.set(Math.random(), Math.random(), Math.random()); // 随机角度
             }
-            
-            geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
-            
-            const material = new THREE.PointsMaterial({
-                color: color,
-                size: size,
-                transparent: true,
-                opacity: 0.8,
-                // 【关键】叠加混合，让粒子重叠发光
-                blending: blendingOpts ? THREE.AdditiveBlending : THREE.NormalBlending,
-                depthWrite: false // 防止粒子互相遮挡出现黑边
-            });
-            
-            return new THREE.Points(geometry, material);
-        }
+            mesh.castShadow = true;
 
-        // A. 树的主体粒子 (青绿色，螺旋上升)
-        const treeParticles = createParticleSystem(3500, 0x00ffaa, 0.06, true, (i, count) => {
-            // 进度 0 (底端) -> 1 (顶端)
-            const progress = i / count; 
-            // 角度：越往上旋转越快
-            const angle = progress * Math.PI * 25; 
-            // 半径：越往上越小，形成圆锥，并加入随机杂色让它看起来自然
-            const radius = (1 - progress) * 3.0 + (Math.random() - 0.5) * 0.4;
+            // --- 关键：计算两个位置 ---
+
+            // A. 树形态的位置 (圆锥螺旋)
+            const progress = i / totalDecos; // 0 到 1，表示从树底到树顶
+            const angle = progress * Math.PI * 20 + Math.random(); // 螺旋角度
+            // 半径随高度变小，底部宽，顶部尖
+            const radius = (1 - progress) * 4.0 + 0.2; 
+            const treeY = progress * 8 - 4; // 高度范围 -4 到 4
+            const treeX = Math.cos(angle) * radius;
+            const treeZ = Math.sin(angle) * radius;
+            // 将计算出的树位置存在对象数据里
+            mesh.userData.posTree = new THREE.Vector3(treeX, treeY, treeZ);
+
+            // B. 散开形态的位置 (随机球体云)
+            const randAngle = Math.random() * Math.PI * 2;
+            const randPhi = Math.acos(2 * Math.random() - 1);
+            const randR = 5 + Math.random() * 6; // 散开半径 5-11
+            mesh.userData.posRandom = new THREE.Vector3(
+                randR * Math.sin(randPhi) * Math.cos(randAngle),
+                randR * Math.sin(randPhi) * Math.sin(randAngle) + 2, //稍微抬高一点
+                randR * Math.cos(randPhi)
+            );
+
+            // 初始状态：先设置在随机位置 (散开状态)
+            mesh.position.copy(mesh.userData.posRandom);
             
-            const x = Math.cos(angle) * radius;
-            // 高度拉伸一下
-            const y = progress * 6 - 2.5; 
-            const z = Math.sin(angle) * radius;
-            return {x, y, z};
-        });
-        mainGroup.add(treeParticles);
-
-        // B. 装饰彩灯粒子 (红/金混合，更大，更散)
-        const ornamentParticles = createParticleSystem(300, 0xff3300, 0.15, true, (i, count) => {
-            const progress = Math.random(); // 完全随机分布
-            const angle = Math.random() * Math.PI * 2;
-            // 半径比树叶稍大一点，浮在表面
-            const radius = (1 - progress) * 3.2 * Math.random();
-            const x = Math.cos(angle) * radius;
-            const y = progress * 5.5 - 2.5;
-            const z = Math.sin(angle) * radius;
-            return {x, y, z};
-        });
-        // 给装饰粒子换个随机色
-        const colors = new Float32Array(300 * 3);
-        const colorPalette = [new THREE.Color(0xff0000), new THREE.Color(0xffd700), new THREE.Color(0xffffff)];
-        for(let i=0; i<300; i++) {
-            const col = colorPalette[Math.floor(Math.random() * colorPalette.length)];
-            colors[i*3] = col.r; colors[i*3+1] = col.g; colors[i*3+2] = col.b;
-        }
-        ornamentParticles.geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
-        ornamentParticles.material.vertexColors = true; // 启用顶点颜色
-        ornamentParticles.material.color = new THREE.Color(0xffffff); // 重置基础色
-        mainGroup.add(ornamentParticles);
-
-        // C. 顶部的粒子星星
-        const starParticles = createParticleSystem(50, 0xffffcc, 0.2, true, (i, count) => {
-            // 球形分布
-            const theta = Math.random() * Math.PI * 2;
-            const phi = Math.acos(2 * Math.random() - 1);
-            const r = 0.3 * Math.cbrt(Math.random()); // 半径更小，聚集在一起
-            return {
-                x: r * Math.sin(phi) * Math.cos(theta),
-                y: r * Math.sin(phi) * Math.sin(theta) + 3.6, // 放在顶部
-                z: r * Math.cos(phi)
+            // 给每个物体一个随机的自转速度，更生动
+            mesh.userData.rotateSpeed = {
+                x: (Math.random()-0.5)*0.02,
+                y: (Math.random()-0.5)*0.02,
+                z: (Math.random()-0.5)*0.02
             };
-        });
-        mainGroup.add(starParticles);
+
+            decGroup.add(mesh);
+            allDecos.push(mesh);
+        }
+
+        // --- 5. 顶部大钻石/星星 ---
+        const topDiamond = new THREE.Mesh(new THREE.OctahedronGeometry(0.5), diamondMat);
+        // 它的树位置在最顶端，随机位置在更高处
+        topDiamond.userData.posTree = new THREE.Vector3(0, 4.5, 0);
+        topDiamond.userData.posRandom = new THREE.Vector3(0, 10, 0);
+        topDiamond.position.copy(topDiamond.userData.posRandom); // 初始在上面
+        decosGroup.add(topDiamond);
+        allDecos.push(topDiamond); // 把它也加入动画队列
+
+        // --- 6. 交互逻辑 ---
         
-        // --- 3. 交互逻辑 (触屏滑动) ---
+        // 动画状态控制
+        let isFormed = false; // 当前是不是树的形态
+        let currentProgress = 0; // 0 = 完全散开, 1 = 完全成树
+        let targetProgress = 0;  // 目标状态
+
+        // 点击屏幕切换状态
+        document.addEventListener('click', () => {
+            isFormed = !isFormed;
+            targetProgress = isFormed ? 1 : 0; // 切换目标值
+            // 添加一点点击时的震动反馈 (可选，视觉上的)
+            decosGroup.scale.setScalar(0.95);
+            setTimeout(()=> decosGroup.scale.setScalar(1), 100);
+        });
+        // 兼容移动端触摸
+        document.addEventListener('touchstart', (e) => {
+             // 如果不是滑动操作才触发点击 (简单判断)
+            if(e.touches.length === 1) {
+                isFormed = !isFormed;
+                targetProgress = isFormed ? 1 : 0;
+            }
+        }, {passive: true});
+
+
+        // 镜头控制 (滑动旋转缩放，沿用之前的逻辑)
         let isDragging = false;
         let previousMousePosition = { x: 0, y: 0 };
         let targetRotationY = 0;
+        let targetRotationX = 0; // 增加上下视角
 
-        document.addEventListener('touchstart', onTouchStart, {passive: false});
         document.addEventListener('touchmove', onTouchMove, {passive: false});
+        document.addEventListener('touchstart', (e) => { isDragging = true; previousMousePosition = { x: e.touches[0].clientX, y: e.touches[0].clientY };}, {passive: true});
         document.addEventListener('touchend', () => { isDragging = false; });
-
-        function onTouchStart(e) {
-            isDragging = true;
-            previousMousePosition = { x: e.touches[0].clientX, y: e.touches[0].clientY };
-        }
 
         function onTouchMove(e) {
             if (!isDragging) return;
-            e.preventDefault(); 
+            e.preventDefault();
             const deltaX = e.touches[0].clientX - previousMousePosition.x;
             const deltaY = e.touches[0].clientY - previousMousePosition.y;
-            // 左右滑动 -> 旋转
-            targetRotationY += deltaX * 0.008;
-            // 上下滑动 -> 缩放 (改变相机距离)
-            targetPositionZ += deltaY * 0.02;
-            // 限制缩放范围
-            targetPositionZ = Math.max(3, Math.min(12, targetPositionZ));
+            targetRotationY += deltaX * 0.005;
+            targetRotationX += deltaY * 0.005;
+            // 限制上下视角
+            targetRotationX = Math.max(-0.5, Math.min(0.5, targetRotationX));
+            
             previousMousePosition = { x: e.touches[0].clientX, y: e.touches[0].clientY };
         }
 
-        // --- 4. 动画循环 ---
-        let time = 0;
+        // --- 7. 核心动画循环 ---
         function animate() {
             requestAnimationFrame(animate);
-            time += 0.01;
 
-            // 平滑旋转和缩放
-            mainGroup.rotation.y += (targetRotationY - mainGroup.rotation.y) * 0.05;
-            camera.position.z += (targetPositionZ - camera.position.z) * 0.1;
-            camera.lookAt(0, 1, 0); // 确保相机看着树中心
+            // A. 状态平滑过渡 (插值动画核心)
+            // 让 currentProgress 缓慢接近 targetProgress，实现平滑移动
+            currentProgress += (targetProgress - currentProgress) * 0.04;
 
-            // 缓慢自转
-            mainGroup.rotation.y += 0.002;
+            // B. 更新每一个装饰品的位置
+            allDecos.forEach(mesh => {
+                // 使用 lerpVectors 在随机位置和树位置之间插值
+                // currentProgress 为 0 时在 posRandom，为 1 时在 posTree
+                mesh.position.lerpVectors(mesh.userData.posRandom, mesh.userData.posTree, currentProgress);
+                
+                // 让它们保持缓慢自转
+                mesh.rotation.x += mesh.userData.rotateSpeed.x;
+                mesh.rotation.y += mesh.userData.rotateSpeed.y;
+                mesh.rotation.z += mesh.userData.rotateSpeed.z;
+            });
 
-            // 让粒子闪烁动起来 (修改顶点位置)
-            const treePositions = treeParticles.geometry.attributes.position.array;
-            for(let i=0; i < treePositions.length / 3; i++) {
-                // 简单的上下浮动效果
-                treePositions[i*3 + 1] += Math.sin(time + treePositions[i*3]) * 0.001;
-            }
-            treeParticles.geometry.attributes.position.needsUpdate = true;
+            // C. 顶部钻石额外动画
+            topDiamond.rotation.y += 0.02;
+
+            // D. 镜头控制平滑过渡
+            decosGroup.rotation.y += (targetRotationY - decosGroup.rotation.y) * 0.05;
+            decosGroup.rotation.x += (targetRotationX - decosGroup.rotation.x) * 0.05;
             
-            // 星星闪烁
-            starParticles.scale.setScalar(1 + Math.sin(time*5) * 0.2);
+            // 缓慢的自动展示旋转
+            targetRotationY += 0.001;
 
             renderer.render(scene, camera);
         }

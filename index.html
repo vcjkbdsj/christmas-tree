@@ -3,21 +3,20 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>🎄 MERRY CHRISTMAS</title>
+    <title>🎄 奢华金沙圣诞</title>
     <style>
-        /* 背景：深邃夜空 */
-        body { margin: 0; overflow: hidden; background: radial-gradient(circle at center, #111 0%, #000 100%); font-family: "Times New Roman", serif; }
+        /* 背景升级：带有金色暖调的深邃夜空，让金属有东西可反射 */
+        body { margin: 0; overflow: hidden; background: radial-gradient(circle at center, #332200 0%, #000000 80%); font-family: "Times New Roman", serif; }
         #canvas-container { width: 100%; height: 100%; position: absolute; top: 0; left: 0; z-index: 1; }
         
-        /* 文字层级要高，确保不被遮挡 */
         #title {
             position: absolute; top: 10%; width: 100%; text-align: center;
-            color: #ffcc00; font-size: 28px; letter-spacing: 4px; font-weight: bold;
-            text-shadow: 0 0 10px rgba(255, 215, 0, 0.5); pointer-events: none; z-index: 10;
+            color: #ffdd55; font-size: 26px; letter-spacing: 3px; font-weight: bold;
+            text-shadow: 0 0 15px rgba(255, 200, 0, 0.8); pointer-events: none; z-index: 10;
         }
         #tips {
             position: absolute; bottom: 8%; width: 100%; text-align: center;
-            color: rgba(255, 255, 255, 0.5); pointer-events: none; font-size: 14px; z-index: 10;
+            color: rgba(255, 220, 150, 0.6); pointer-events: none; font-size: 14px; z-index: 10; letter-spacing: 1px;
         }
     </style>
     <script src="https://cdn.bootcdn.net/ajax/libs/three.js/r128/three.min.js"></script>
@@ -25,176 +24,148 @@
 <body>
 
     <div id="title">MERRY CHRISTMAS</div>
-    <div id="tips">轻触屏幕聚拢/散开 | 滑动旋转</div>
+    <div id="tips">✨ 轻触屏幕聚拢/散开 | 滑动鉴赏 ✨</div>
     <div id="canvas-container"></div>
 
     <script>
-        // --- 1. 场景设置 ---
+        // --- 1. 场景与摄影机 ---
         const container = document.getElementById('canvas-container');
         const scene = new THREE.Scene();
-        scene.fog = new THREE.FogExp2(0x000000, 0.03); // 黑色雾气增加深邃感
+        // 暖金色雾气，增加辉煌感
+        scene.fog = new THREE.FogExp2(0x221100, 0.02);
 
-        const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
-        camera.position.set(0, 0, 13); // 初始相机位置
+        const camera = new THREE.PerspectiveCamera(65, window.innerWidth / window.innerHeight, 0.1, 1000);
+        camera.position.set(0, 2, 14); 
 
-        const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+        // 开启物理正确的光照模式
+        renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+        renderer.physicallyCorrectLights = true; 
+        renderer.outputEncoding = THREE.sRGBEncoding;
+        renderer.toneMapping = THREE.ACESFilmicToneMapping;
+        renderer.toneMappingExposure = 1.2; // 增加曝光度，更亮
         renderer.setSize(window.innerWidth, window.innerHeight);
         renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-        renderer.shadowMap.enabled = true; // 开启阴影
+        renderer.shadowMap.enabled = true;
         container.appendChild(renderer.domElement);
 
-        // --- 2. 灯光系统 (营造金碧辉煌的感觉) ---
-        const ambientLight = new THREE.AmbientLight(0xffffff, 0.4);
+        // --- 2. 奢华灯光系统 (解决黑块问题的关键) ---
+        
+        // 环境光：暖金色基础照明
+        const ambientLight = new THREE.AmbientLight(0xffccaa, 1.5);
         scene.add(ambientLight);
 
-        // 主金光
-        const dirLight = new THREE.DirectionalLight(0xffd700, 1.2);
-        dirLight.position.set(5, 10, 7);
-        dirLight.castShadow = true;
-        scene.add(dirLight);
+        // 主光：强烈暖金射灯 (右上方)
+        const mainLight = new THREE.DirectionalLight(0xffd700, 3.5);
+        mainLight.position.set(10, 15, 10);
+        mainLight.castShadow = true;
+        scene.add(mainLight);
 
-        // 侧面补光 (蓝色调，形成冷暖对比)
-        const pointLight = new THREE.PointLight(0x4444ff, 0.8, 20);
-        pointLight.position.set(-5, 0, -5);
-        scene.add(pointLight);
+        // 补光1：底部向上照的金光，照亮物体底部
+        const bottomLight = new THREE.PointLight(0xffaa00, 2.5, 20);
+        bottomLight.position.set(0, -5, 2);
+        scene.add(bottomLight);
+        
+        // 补光2：侧面冷光增加对比度，让金色更有质感
+        const rimLight = new THREE.PointLight(0x8888ff, 2.0, 20);
+        rimLight.position.set(-8, 5, -5);
+        scene.add(rimLight);
 
-        // --- 3. 材质 ---
-        // 高光黄金材质
-        const goldMat = new THREE.MeshStandardMaterial({ 
-            color: 0xffcc00, 
-            metalness: 1.0, 
-            roughness: 0.2,
-            envMapIntensity: 1.0 
-        });
-        // 磨砂红球材质
-        const redMat = new THREE.MeshStandardMaterial({ 
-            color: 0xaa0000, 
-            metalness: 0.6, 
-            roughness: 0.4 
-        });
 
-        // --- 4. 创建粒子树主体 ---
-        const decosGroup = new THREE.Group(); // 组名定义
+        // --- 3. 丰富的材质库 ---
+        const mats = [
+            // 镜面耀眼金 (极高反射)
+            new THREE.MeshStandardMaterial({ color: 0xffd700, metalness: 1.0, roughness: 0.05, emissive: 0x221100 }),
+            // 磨砂质感金 (较粗糙)
+            new THREE.MeshStandardMaterial({ color: 0xffcc33, metalness: 0.8, roughness: 0.35 }),
+            // 红宝石金属 (深红反射)
+            new THREE.MeshStandardMaterial({ color: 0xdd0033, metalness: 0.7, roughness: 0.2, emissive: 0x330000 })
+        ];
+
+        // --- 4. 丰富的形状库 ---
+        const geos = [
+            new THREE.BoxGeometry(0.9, 0.9, 0.9), // 礼物盒
+            new THREE.SphereGeometry(0.65, 24, 24), // 圆润金球
+            new THREE.IcosahedronGeometry(0.7, 0), // 宝石 (多面)
+            new THREE.OctahedronGeometry(0.75, 0), // 钻石 (尖锐)
+            new THREE.TorusGeometry(0.5, 0.25, 12, 24) // 金环/甜甜圈
+        ];
+
+        // --- 5. 创建粒子主体 ---
+        const decosGroup = new THREE.Group();
         scene.add(decosGroup);
-
         const allDecos = []; 
-        const totalDecos = 600; // 粒子数量
-
-        // 复用几何体优化性能
-        const boxGeo = new THREE.BoxGeometry(1, 1, 1);
-        const sphereGeo = new THREE.SphereGeometry(0.6, 16, 16);
+        const totalDecos = 666; // 吉利数字
 
         for (let i = 0; i < totalDecos; i++) {
-            let mesh;
-            // 80% 是金色方块(模拟礼物盒/金砖)，20% 是红色球
-            if (Math.random() > 0.2) {
-                mesh = new THREE.Mesh(boxGeo, goldMat);
-                // 随机拉伸一点，像长方体礼物盒
-                mesh.scale.set(Math.random()*0.3+0.1, Math.random()*0.3+0.1, Math.random()*0.3+0.1);
-            } else {
-                mesh = new THREE.Mesh(sphereGeo, redMat);
-                const s = Math.random()*0.3 + 0.2;
-                mesh.scale.set(s, s, s);
-            }
-
-            // --- 核心算法：计算“树形态”和“散开形态”的坐标 ---
+            // 【关键】随机选择形状和材质
+            const randomGeo = geos[Math.floor(Math.random() * geos.length)];
+            const randomMat = mats[Math.floor(Math.random() * mats.length)];
             
-            // A. 树形态 (圆锥螺旋)
-            const p = i / totalDecos; // 0 (底) -> 1 (顶)
-            const angle = p * Math.PI * 25 + i * 0.1; // 螺旋
-            const radius = (1 - p) * 4.5; // 下面宽上面窄
-            const y = p * 9 - 4.5; // 高度分布
+            const mesh = new THREE.Mesh(randomGeo, randomMat);
+            mesh.castShadow = true;
+            mesh.receiveShadow = true;
             
-            // 存入自定义数据
-            mesh.userData.posTree = new THREE.Vector3(
-                Math.cos(angle) * radius,
-                y,
-                Math.sin(angle) * radius
-            );
+            // 随机微调大小
+            const s = Math.random() * 0.4 + 0.6;
+            mesh.scale.set(s,s,s);
 
-            // B. 散开形态 (随机爆炸)
-            // 使用球坐标随机分布
+            // --- 位置算法 (保持不变) ---
+            // A. 树形态
+            const p = i / totalDecos; 
+            const angle = p * Math.PI * 26 + i * 0.05; 
+            const radius = (1 - p) * 4.8 + Math.random()*0.3; 
+            const y = p * 10 - 5; 
+            mesh.userData.posTree = new THREE.Vector3(Math.cos(angle)*radius, y, Math.sin(angle)*radius);
+
+            // B. 散开形态
             const theta = Math.random() * Math.PI * 2;
             const phi = Math.acos(2 * Math.random() - 1);
-            const r = 6 + Math.random() * 8; // 半径 6-14
+            const r = 7 + Math.random() * 9; 
+            mesh.userData.posExplode = new THREE.Vector3(r*Math.sin(phi)*Math.cos(theta), r*Math.sin(phi)*Math.sin(theta), r*Math.cos(phi));
             
-            mesh.userData.posExplode = new THREE.Vector3(
-                r * Math.sin(phi) * Math.cos(theta),
-                r * Math.sin(phi) * Math.sin(theta),
-                r * Math.cos(phi)
-            );
+            mesh.userData.rotSpeed = { x: Math.random()*0.03, y: Math.random()*0.03, z: Math.random()*0.03 };
+            mesh.position.copy(mesh.userData.posExplode); // 初始状态：散开
             
-            // 随机自转速度
-            mesh.userData.rotSpeed = {
-                x: Math.random() * 0.02,
-                y: Math.random() * 0.02
-            };
-
-            // 初始位置：先设置为散开
-            mesh.position.copy(mesh.userData.posExplode);
-            
-            decosGroup.add(mesh); // 【修正点】这里之前写错了变量名
+            decosGroup.add(mesh);
             allDecos.push(mesh);
         }
 
-        // 顶部大星星
-        const star = new THREE.Mesh(
-            new THREE.OctahedronGeometry(0.5, 0),
-            new THREE.MeshBasicMaterial({ color: 0xffffaa })
+        // 顶部超级大钻石
+        const topStar = new THREE.Mesh(
+            new THREE.OctahedronGeometry(1.2, 0),
+            new THREE.MeshStandardMaterial({ color: 0xffffff, metalness: 0.9, roughness: 0, emissive: 0x555522, transparent: true, opacity: 0.9 })
         );
-        star.userData.posTree = new THREE.Vector3(0, 5, 0);
-        star.userData.posExplode = new THREE.Vector3(0, 12, 0);
-        star.position.copy(star.userData.posExplode);
-        decosGroup.add(star);
-        allDecos.push(star);
+        topStar.userData.posTree = new THREE.Vector3(0, 5.8, 0);
+        topStar.userData.posExplode = new THREE.Vector3(0, 14, 0);
+        topStar.position.copy(topStar.userData.posExplode);
+        decosGroup.add(topStar);
+        allDecos.push(topStar);
 
-        // --- 5. 交互逻辑 ---
-        let isTreeForm = false; // 当前状态：false=散开, true=树
-        let progress = 0; // 动画进度 0 -> 1
+        // --- 6. 交互与动画 ---
+        let isTreeForm = false;
+        let progress = 0;
 
-        // 点击/触摸触发切换
-        function toggleState() {
-            isTreeForm = !isTreeForm;
-        }
+        function toggleState() { isTreeForm = !isTreeForm; }
         window.addEventListener('click', toggleState);
-        window.addEventListener('touchstart', (e) => {
-            // 简单的触摸防抖
-            if(e.touches.length === 1) toggleState();
-        }, {passive: false});
+        window.addEventListener('touchstart', (e) => { if(e.touches.length === 1) toggleState(); }, {passive: false});
 
-        // 触摸滑动旋转
-        let targetRotY = 0;
-        let lastX = 0;
-        window.addEventListener('touchmove', (e) => {
-            const currentX = e.touches[0].clientX;
-            const deltaX = currentX - lastX;
-            targetRotY += deltaX * 0.005;
-            lastX = currentX;
-        });
-        window.addEventListener('touchstart', (e) => {
-            lastX = e.touches[0].clientX;
-        });
+        let targetRotY = 0; let lastX = 0;
+        window.addEventListener('touchmove', (e) => { targetRotY += (e.touches[0].clientX - lastX) * 0.006; lastX = e.touches[0].clientX; });
+        window.addEventListener('touchstart', (e) => { lastX = e.touches[0].clientX; });
 
-        // --- 6. 动画循环 ---
         function animate() {
             requestAnimationFrame(animate);
-
-            // 状态插值：目标值是 1(树) 或 0(散开)
             const target = isTreeForm ? 1 : 0;
-            // 缓动公式：让 progress 慢慢接近 target
-            progress += (target - progress) * 0.03;
+            progress += (target - progress) * 0.04; // 缓动
 
-            // 更新每个物体的位置
             allDecos.forEach(mesh => {
-                // 利用 lerp 在两个状态间过渡
                 mesh.position.lerpVectors(mesh.userData.posExplode, mesh.userData.posTree, progress);
-                
-                // 持续自转
-                mesh.rotation.x += mesh.userData.rotSpeed?.x || 0.01;
-                mesh.rotation.y += mesh.userData.rotSpeed?.y || 0.01;
+                mesh.rotation.x += mesh.userData.rotSpeed.x;
+                mesh.rotation.y += mesh.userData.rotSpeed.y;
+                mesh.rotation.z += mesh.userData.rotSpeed.z;
             });
 
-            // 整体旋转 (自动 + 手动)
+            topStar.rotation.y += 0.02; // 顶部钻石独立旋转
             decosGroup.rotation.y += 0.002; // 自动慢转
             decosGroup.rotation.y += (targetRotY - decosGroup.rotation.y) * 0.05; // 手动跟随
 
@@ -202,7 +173,6 @@
         }
         animate();
 
-        // 适配窗口
         window.addEventListener('resize', () => {
             camera.aspect = window.innerWidth / window.innerHeight;
             camera.updateProjectionMatrix();

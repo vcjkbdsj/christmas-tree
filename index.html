@@ -3,172 +3,197 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>🎄 圣诞快乐</title>
+    <title>🎄 璀璨星河圣诞树</title>
     <style>
-        /* 1. 强制深色背景，避免白屏刺眼 */
+        /* 深邃的宇宙背景，衬托发光粒子 */
         body { 
             margin: 0; overflow: hidden; background-color: #000; 
-            background: radial-gradient(circle at center, #1a1000 0%, #000000 100%); 
+            background: radial-gradient(circle at center, #1a1020 0%, #000000 100%); 
         }
-        /* 2. 调试信息显示区 (如果出错会显示在这里) */
         #debug {
             position: absolute; top: 0; left: 0; color: red; z-index: 100; 
             background: rgba(0,0,0,0.8); padding: 10px; display: none;
         }
         #title {
-            position: absolute; top: 15%; width: 100%; text-align: center;
-            color: #ffd700; font-size: 24px; font-weight: bold; letter-spacing: 5px;
-            text-shadow: 0 0 10px rgba(255, 215, 0, 0.8); pointer-events: none;
+            position: absolute; top: 12%; width: 100%; text-align: center;
+            color: #ffd700; font-size: 26px; font-weight: bold; letter-spacing: 4px;
+            text-shadow: 0 0 15px rgba(255, 215, 0, 1.0); pointer-events: none;
             font-family: "Times New Roman", serif;
         }
         #tips {
             position: absolute; bottom: 10%; width: 100%; text-align: center;
-            color: rgba(255, 255, 255, 0.5); font-size: 14px; pointer-events: none;
+            color: rgba(255, 255, 255, 0.7); font-size: 14px; pointer-events: none;
+            text-shadow: 0 0 5px #000;
         }
     </style>
-    
     <script src="https://cdn.staticfile.org/three.js/r128/three.min.js"></script>
 </head>
 <body>
 
     <div id="debug"></div>
     <div id="title">MERRY CHRISTMAS</div>
-    <div id="tips">✨ 点击屏幕聚拢 | 滑动旋转 ✨</div>
-    
+    <div id="tips">✨ 点击屏幕聚拢/散开 | 滑动旋转 ✨</div>
     <div id="canvas-container" style="width:100%; height:100%; position:absolute; top:0; left:0; z-index:1;"></div>
 
     <script>
-        // --- 错误捕捉系统 ---
-        window.onerror = function(msg, url, line) {
+        window.onerror = function(msg) {
             const debugEl = document.getElementById('debug');
             debugEl.style.display = 'block';
             debugEl.innerHTML += "错误: " + msg + "<br>";
         };
 
-        // 检查 Three.js 是否加载成功
-        if (typeof THREE === 'undefined') {
-            document.getElementById('debug').style.display = 'block';
-            document.getElementById('debug').innerHTML = "致命错误：Three.js 引擎加载失败！请检查网络或更换 WiFi。";
-        }
-
-        // --- 正常逻辑开始 ---
         try {
             const container = document.getElementById('canvas-container');
             const scene = new THREE.Scene();
-            scene.fog = new THREE.FogExp2(0x000000, 0.03);
+            scene.fog = new THREE.FogExp2(0x000000, 0.02);
 
             const camera = new THREE.PerspectiveCamera(65, window.innerWidth / window.innerHeight, 0.1, 1000);
-            camera.position.set(0, 0, 14);
+            camera.position.set(0, 2, 16);
 
+            // 开启物理上正确的光照计算
             const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+            renderer.physicallyCorrectLights = true;
+            renderer.outputEncoding = THREE.sRGBEncoding;
+            renderer.toneMapping = THREE.ACESFilmicToneMapping;
+            renderer.toneMappingExposure = 1.2;
             renderer.setSize(window.innerWidth, window.innerHeight);
             renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
             renderer.shadowMap.enabled = true;
             container.appendChild(renderer.domElement);
 
-            // 灯光
-            const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
+            // --- 奢华灯光系统 ---
+            const ambientLight = new THREE.AmbientLight(0x444444, 0.5);
             scene.add(ambientLight);
-            const dirLight = new THREE.DirectionalLight(0xffd700, 2.5);
-            dirLight.position.set(5, 10, 7);
-            dirLight.castShadow = true;
-            scene.add(dirLight);
 
-            // 材质
-            const goldMat = new THREE.MeshStandardMaterial({ color: 0xffcc00, metalness: 0.9, roughness: 0.1 });
-            const redMat = new THREE.MeshStandardMaterial({ color: 0xaa0000, metalness: 0.5, roughness: 0.4 });
+            // 主金色射灯
+            const mainLight = new THREE.DirectionalLight(0xffd700, 3.0);
+            mainLight.position.set(5, 15, 10);
+            mainLight.castShadow = true;
+            scene.add(mainLight);
+            
+            // 彩色补光，增加层次感
+            const redLight = new THREE.PointLight(0xff0000, 1.5, 20);
+            redLight.position.set(-10, 5, 5);
+            scene.add(redLight);
+            const blueLight = new THREE.PointLight(0x0000ff, 1.5, 20);
+            blueLight.position.set(10, -5, 5);
+            scene.add(blueLight);
 
-            // 粒子系统
+            // --- 丰富的材质库 (带自发光!) ---
+            const materials = [
+                new THREE.MeshStandardMaterial({ color: 0xffd700, emissive: 0xaa8800, emissiveIntensity: 0.4, metalness: 1.0, roughness: 0.1 }), // 金
+                new THREE.MeshStandardMaterial({ color: 0xff0000, emissive: 0x880000, emissiveIntensity: 0.5, metalness: 0.8, roughness: 0.2 }), // 红
+                new THREE.MeshStandardMaterial({ color: 0x00ff00, emissive: 0x008800, emissiveIntensity: 0.4, metalness: 0.8, roughness: 0.2 }), // 绿
+                new THREE.MeshStandardMaterial({ color: 0x0088ff, emissive: 0x0044aa, emissiveIntensity: 0.5, metalness: 0.9, roughness: 0.1 }), // 蓝
+                new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0xaaaaaa, emissiveIntensity: 0.3, metalness: 0.7, roughness: 0.3 })  // 银
+            ];
+
+            // --- 丰富的形状库 ---
+            const geometries = [
+                new THREE.BoxGeometry(0.6, 0.6, 0.6),
+                new THREE.SphereGeometry(0.4, 16, 16),
+                new THREE.OctahedronGeometry(0.5, 0), // 钻石
+                new THREE.IcosahedronGeometry(0.5, 0), // 宝石
+            ];
+            const starGeo = new THREE.OctahedronGeometry(1.5, 0); // 顶部大星星
+
+            // --- 粒子系统 ---
             const group = new THREE.Group();
             scene.add(group);
             const allMesh = [];
-            const count = 600;
-
-            const boxGeo = new THREE.BoxGeometry(0.7, 0.7, 0.7);
-            const sphereGeo = new THREE.SphereGeometry(0.4, 16, 16);
+            const count = 1200; // 数量翻倍！
 
             for (let i = 0; i < count; i++) {
-                // 形状
-                const mesh = new THREE.Mesh(Math.random()>0.3 ? boxGeo : sphereGeo, Math.random()>0.3 ? goldMat : redMat);
+                // 随机选择形状和材质
+                const geo = geometries[Math.floor(Math.random() * geometries.length)];
+                const mat = materials[Math.floor(Math.random() * materials.length)].clone(); // clone 以便单独控制闪烁
+                const mesh = new THREE.Mesh(geo, mat);
+                mesh.castShadow = true; mesh.receiveShadow = true;
                 
-                // 位置A：散开
-                const r = 12;
+                // 随机大小
+                const s = Math.random() * 0.5 + 0.3;
+                mesh.scale.set(s,s,s);
+
+                // 位置A：爆炸散开
+                const r = 15;
                 mesh.userData.posOpen = new THREE.Vector3(
-                    (Math.random()-0.5)*r*2, (Math.random()-0.5)*r*2, (Math.random()-0.5)*r*1.5
+                    (Math.random()-0.5)*r*2.5, (Math.random()-0.5)*r*2.5, (Math.random()-0.5)*r*2
                 );
 
-                // 位置B：树
+                // 位置B：聚拢成树
                 const p = i / count; 
-                const angle = p * Math.PI * 22 + i * 0.1;
-                const radius = (1 - p) * 5.0;
+                const angle = p * Math.PI * 30 + i * 0.05;
+                const radius = (1 - p) * 6.5;
                 mesh.userData.posTree = new THREE.Vector3(
-                    Math.cos(angle)*radius, p * 10 - 5, Math.sin(angle)*radius
+                    Math.cos(angle)*radius, p * 13 - 6.5, Math.sin(angle)*radius
                 );
 
-                mesh.position.copy(mesh.userData.posOpen); // 默认散开
-                mesh.userData.speed = Math.random() * 0.02;
+                mesh.position.copy(mesh.userData.posOpen);
+                
+                // 随机参数用于闪烁动画
+                mesh.userData.randomPhase = Math.random() * Math.PI * 2;
+                mesh.userData.rotSpeed = { x: Math.random()*0.03, y: Math.random()*0.03 };
 
                 group.add(mesh);
                 allMesh.push(mesh);
             }
 
-            // 顶部星星
-            const star = new THREE.Mesh(new THREE.OctahedronGeometry(1.2), new THREE.MeshBasicMaterial({color:0xffff00}));
-            star.userData.posOpen = new THREE.Vector3(0, 15, 0);
-            star.userData.posTree = new THREE.Vector3(0, 5.5, 0);
-            star.position.copy(star.userData.posOpen);
-            group.add(star);
-            allMesh.push(star);
+            // 顶部超级大星星
+            const topStarMat = new THREE.MeshStandardMaterial({ 
+                color: 0xffff00, emissive: 0xffff00, emissiveIntensity: 1, metalness: 1, roughness: 0 
+            });
+            const topStar = new THREE.Mesh(starGeo, topStarMat);
+            topStar.userData.posOpen = new THREE.Vector3(0, 18, 0);
+            topStar.userData.posTree = new THREE.Vector3(0, 7.5, 0);
+            topStar.position.copy(topStar.userData.posOpen);
+            group.add(topStar);
+            allMesh.push(topStar);
 
-            // 交互状态
+            // --- 交互与动画 ---
             let isTree = false;
             let progress = 0;
-
-            // --- 核心交互修复 ---
             
-            // 1. 点击切换
-            document.body.addEventListener('click', function() {
-                isTree = !isTree;
-            });
+            document.body.addEventListener('click', () => { isTree = !isTree; });
+            document.body.addEventListener('touchstart', (e) => {
+                if(e.changedTouches.length === 1 && Math.abs(e.changedTouches[0].clientX - lastX) < 5) {
+                     isTree = !isTree;
+                }
+            }, {passive: true});
 
-            // 2. 滑动旋转
-            let lastX = 0;
-            let rotY = 0;
-            
-            document.body.addEventListener('touchstart', function(e) {
-                lastX = e.touches[0].clientX;
-            }, {passive: false});
+            let lastX = 0; let rotY = 0;
+            document.body.addEventListener('touchstart', (e) => { lastX = e.touches[0].clientX; }, {passive: true});
+            document.body.addEventListener('touchmove', (e) => {
+                rotY += (e.touches[0].clientX - lastX) * 0.008; lastX = e.touches[0].clientX;
+            }, {passive: true});
 
-            document.body.addEventListener('touchmove', function(e) {
-                const currentX = e.touches[0].clientX;
-                rotY += (currentX - lastX) * 0.01;
-                lastX = currentX;
-                // 不阻止默认事件，防止卡死，但如果需要阻止滚动可以加上 e.preventDefault()
-            }, {passive: false});
-
-            // 动画
+            let time = 0;
             function animate() {
                 requestAnimationFrame(animate);
-
-                // 切换动画
-                const target = isTree ? 1 : 0;
-                progress += (target - progress) * 0.05;
+                time += 0.05;
+                progress += ((isTree ? 1 : 0) - progress) * 0.04;
 
                 allMesh.forEach(m => {
                     m.position.lerpVectors(m.userData.posOpen, m.userData.posTree, progress);
-                    m.rotation.y += m.userData.speed;
+                    m.rotation.x += m.userData.rotSpeed.x;
+                    m.rotation.y += m.userData.rotSpeed.y;
+                    
+                    // 闪烁效果：动态改变自发光强度
+                    if(m.material.emissiveIntensity) {
+                        m.material.emissiveIntensity = 0.3 + Math.sin(time + m.userData.randomPhase) * 0.2;
+                    }
                 });
+                
+                topStar.rotation.y += 0.02;
+                topStar.material.emissiveIntensity = 1 + Math.sin(time*2)*0.3; // 大星星闪得更亮
 
-                // 旋转逻辑
-                group.rotation.y += 0.002; // 自动
-                group.rotation.y += (rotY - group.rotation.y) * 0.1; // 手动跟随
+                group.rotation.y += 0.001;
+                group.rotation.y += (rotY - group.rotation.y) * 0.1;
 
                 renderer.render(scene, camera);
             }
             animate();
 
-            // 调整窗口
-            window.addEventListener('resize', function() {
+            window.addEventListener('resize', () => {
                 camera.aspect = window.innerWidth / window.innerHeight;
                 camera.updateProjectionMatrix();
                 renderer.setSize(window.innerWidth, window.innerHeight);

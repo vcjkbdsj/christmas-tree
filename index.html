@@ -3,178 +3,208 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>🎄 金色圣诞梦境</title>
+    <title>🎄 圣诞快乐</title>
     <style>
-        /* 背景：带有金色暖调的深邃夜空 */
-        body { margin: 0; overflow: hidden; background: radial-gradient(circle at center, #332200 0%, #000000 80%); font-family: "Times New Roman", serif; }
+        /* 强制背景为深色，防止白屏 */
+        html, body { 
+            margin: 0; 
+            overflow: hidden; 
+            width: 100%; 
+            height: 100%; 
+            background-color: #000; 
+            background: radial-gradient(circle at center, #1a1000 0%, #000000 100%); 
+            font-family: "Times New Roman", serif; 
+        }
         #canvas-container { width: 100%; height: 100%; position: absolute; top: 0; left: 0; z-index: 1; }
         
         #title {
-            position: absolute; top: 10%; width: 100%; text-align: center;
-            color: #ffdd55; font-size: 26px; letter-spacing: 3px; font-weight: bold;
-            text-shadow: 0 0 15px rgba(255, 200, 0, 0.8); pointer-events: none; z-index: 10;
+            position: absolute; top: 12%; width: 100%; text-align: center;
+            color: #ffd700; font-size: 24px; letter-spacing: 4px; font-weight: bold;
+            text-shadow: 0 0 10px rgba(255, 215, 0, 0.6); pointer-events: none; z-index: 10;
         }
         #tips {
             position: absolute; bottom: 8%; width: 100%; text-align: center;
-            color: rgba(255, 220, 150, 0.8); pointer-events: none; font-size: 16px; z-index: 10; letter-spacing: 1px;
-            text-shadow: 0 0 5px rgba(0,0,0,0.5);
+            color: rgba(255, 255, 255, 0.6); pointer-events: none; font-size: 14px; z-index: 10;
+            text-shadow: 0 0 2px #000;
         }
     </style>
-    <script src="https://cdn.bootcdn.net/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://lib.baomitu.com/three.js/r128/three.min.js"></script>
 </head>
 <body>
 
     <div id="title">MERRY CHRISTMAS</div>
-    <div id="tips">✨ 手指滑动旋转 | 轻触聚拢散开 ✨</div>
+    <div id="tips">✨ 点击屏幕聚拢/散开 | 滑动旋转 ✨</div>
     <div id="canvas-container"></div>
 
     <script>
-        // --- 1. 场景与摄影机 (修复了变量定义问题) ---
+        // 1. 初始化场景
         const container = document.getElementById('canvas-container');
         const scene = new THREE.Scene();
-        scene.fog = new THREE.FogExp2(0x221100, 0.02); // 暖雾
+        scene.fog = new THREE.FogExp2(0x000000, 0.02);
 
         const camera = new THREE.PerspectiveCamera(65, window.innerWidth / window.innerHeight, 0.1, 1000);
-        camera.position.set(0, 2, 14); 
+        camera.position.set(0, 0, 14);
 
+        // 【修复点】这里加上了 const，防止报错
         const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
-        renderer.physicallyCorrectLights = true; 
-        renderer.outputEncoding = THREE.sRGBEncoding;
-        renderer.toneMapping = THREE.ACESFilmicToneMapping;
-        renderer.toneMappingExposure = 1.1; 
         renderer.setSize(window.innerWidth, window.innerHeight);
         renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-        renderer.shadowMap.enabled = true;
+        renderer.shadowMap.enabled = true; // 开启阴影
         container.appendChild(renderer.domElement);
 
-        // --- 2. 奢华灯光系统 ---
-        const ambientLight = new THREE.AmbientLight(0xffccaa, 1.5);
+        // 2. 灯光设置 (金光闪闪的关键)
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.4);
         scene.add(ambientLight);
 
-        const mainLight = new THREE.DirectionalLight(0xffd700, 3.0);
-        mainLight.position.set(10, 15, 10);
-        mainLight.castShadow = true;
-        scene.add(mainLight);
-
-        const bottomLight = new THREE.PointLight(0xffaa00, 2.0, 20);
-        bottomLight.position.set(0, -5, 2);
-        scene.add(bottomLight);
+        const dirLight = new THREE.DirectionalLight(0xffaa00, 2.0);
+        dirLight.position.set(10, 10, 10);
+        dirLight.castShadow = true;
+        scene.add(dirLight);
         
-        const rimLight = new THREE.PointLight(0x8888ff, 1.5, 20);
-        rimLight.position.set(-8, 5, -5);
-        scene.add(rimLight);
+        const pointLight = new THREE.PointLight(0xffd700, 1.5, 15);
+        pointLight.position.set(0, 5, 5);
+        scene.add(pointLight);
 
+        // 3. 材质准备
+        // 亮金
+        const goldMat = new THREE.MeshStandardMaterial({ 
+            color: 0xffcc00, 
+            metalness: 0.9, 
+            roughness: 0.1,
+            emissive: 0x111100
+        });
+        // 磨砂红
+        const redMat = new THREE.MeshStandardMaterial({ 
+            color: 0xaa0000, 
+            metalness: 0.6, 
+            roughness: 0.4 
+        });
 
-        // --- 3. 材质与形状库 ---
-        const mats = [
-            new THREE.MeshStandardMaterial({ color: 0xffd700, metalness: 1.0, roughness: 0.05, emissive: 0x221100 }), // 耀眼金
-            new THREE.MeshStandardMaterial({ color: 0xffcc33, metalness: 0.8, roughness: 0.35 }), // 磨砂金
-            new THREE.MeshStandardMaterial({ color: 0xdd0033, metalness: 0.7, roughness: 0.2, emissive: 0x330000 }) // 红宝石
-        ];
+        // 4. 创建装饰品组
+        const group = new THREE.Group();
+        scene.add(group);
 
-        const geos = [
-            new THREE.BoxGeometry(0.9, 0.9, 0.9), // 礼物盒
-            new THREE.SphereGeometry(0.65, 24, 24), // 圆球
-            new THREE.IcosahedronGeometry(0.7, 0), // 宝石
-            new THREE.TorusGeometry(0.5, 0.25, 12, 24) // 金环
-        ];
+        const allMesh = [];
+        const count = 550; // 粒子数量
 
-        // --- 4. 创建粒子主体 ---
-        const decosGroup = new THREE.Group();
-        scene.add(decosGroup);
-        const allDecos = []; 
-        const totalDecos = 600;
+        const boxGeo = new THREE.BoxGeometry(0.8, 0.8, 0.8);
+        const sphereGeo = new THREE.SphereGeometry(0.5, 16, 16);
 
-        for (let i = 0; i < totalDecos; i++) {
-            const randomGeo = geos[Math.floor(Math.random() * geos.length)];
-            const randomMat = mats[Math.floor(Math.random() * mats.length)];
+        for(let i=0; i<count; i++) {
+            // 随机选择形状和材质
+            let mesh;
+            if(Math.random() > 0.25) {
+                mesh = new THREE.Mesh(boxGeo, goldMat);
+            } else {
+                mesh = new THREE.Mesh(sphereGeo, redMat);
+            }
             
-            const mesh = new THREE.Mesh(randomGeo, randomMat);
+            // 随机大小
+            const s = Math.random() * 0.5 + 0.3;
+            mesh.scale.set(s,s,s);
             mesh.castShadow = true;
             mesh.receiveShadow = true;
-            
-            const s = Math.random() * 0.4 + 0.6;
-            mesh.scale.set(s,s,s);
 
-            // A. 树形态位置
-            const p = i / totalDecos; 
-            const angle = p * Math.PI * 26 + i * 0.05; 
-            const radius = (1 - p) * 4.8 + Math.random()*0.3; 
-            const y = p * 10 - 5; 
-            mesh.userData.posTree = new THREE.Vector3(Math.cos(angle)*radius, y, Math.sin(angle)*radius);
+            // --- 位置计算 ---
+            
+            // A. 散开位置 (随机炸开)
+            const range = 10;
+            const xRand = (Math.random()-0.5) * range * 2.5;
+            const yRand = (Math.random()-0.5) * range * 2.5;
+            const zRand = (Math.random()-0.5) * range * 1.5;
+            mesh.userData.posOpen = new THREE.Vector3(xRand, yRand, zRand);
 
-            // B. 散开形态位置
-            const theta = Math.random() * Math.PI * 2;
-            const phi = Math.acos(2 * Math.random() - 1);
-            const r = 7 + Math.random() * 9; 
-            mesh.userData.posExplode = new THREE.Vector3(r*Math.sin(phi)*Math.cos(theta), r*Math.sin(phi)*Math.sin(theta), r*Math.cos(phi));
+            // B. 聚拢位置 (圣诞树形态)
+            const p = i / count; // 0到1
+            const angle = p * Math.PI * 24 + i * 0.1;
+            const radius = (1 - p) * 5.0; // 底部宽，顶部尖
+            const yTree = p * 10 - 5;
+            const xTree = Math.cos(angle) * radius;
+            const zTree = Math.sin(angle) * radius;
+            mesh.userData.posTree = new THREE.Vector3(xTree, yTree, zTree);
+
+            // 初始设为散开
+            mesh.position.copy(mesh.userData.posOpen);
             
-            mesh.userData.rotSpeed = { x: Math.random()*0.03, y: Math.random()*0.03, z: Math.random()*0.03 };
-            mesh.position.copy(mesh.userData.posExplode); // 初始状态：散开
-            
-            decosGroup.add(mesh);
-            allDecos.push(mesh);
+            // 随机自转
+            mesh.userData.rotSpeed = {
+                x: Math.random() * 0.02,
+                y: Math.random() * 0.02
+            };
+
+            group.add(mesh);
+            allMesh.push(mesh);
         }
 
-        // 顶部大钻石
-        const topStar = new THREE.Mesh(
-            new THREE.OctahedronGeometry(1.2, 0),
-            new THREE.MeshStandardMaterial({ color: 0xffffff, metalness: 0.9, roughness: 0, emissive: 0x555522, transparent: true, opacity: 0.9 })
+        // 顶部大星星
+        const star = new THREE.Mesh(
+            new THREE.OctahedronGeometry(1.0, 0),
+            new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0x444400, metalness: 0.8 })
         );
-        topStar.userData.posTree = new THREE.Vector3(0, 5.8, 0);
-        topStar.userData.posExplode = new THREE.Vector3(0, 14, 0);
-        topStar.position.copy(topStar.userData.posExplode);
-        decosGroup.add(topStar);
-        allDecos.push(topStar);
+        star.userData.posTree = new THREE.Vector3(0, 5.5, 0);
+        star.userData.posOpen = new THREE.Vector3(0, 12, 0);
+        star.position.copy(star.userData.posOpen);
+        group.add(star);
+        allMesh.push(star);
 
-        // --- 5. 交互逻辑 (增强版) ---
-        let isTreeForm = false;
-        let progress = 0;
+        // 5. 交互逻辑
+        let isTree = false; // 当前是不是树
+        let progress = 0;   // 动画进度
 
-        // 点击切换状态
-        function toggleState() { isTreeForm = !isTreeForm; }
-        window.addEventListener('click', toggleState);
-        // 触摸优化：区分点击和滑动
-        let touchStartTime = 0;
-        window.addEventListener('touchstart', (e) => { touchStartTime = Date.now(); }, {passive: false});
-        window.addEventListener('touchend', (e) => {
-            // 如果触摸时间短于200ms，认为是点击，触发切换
-            if (Date.now() - touchStartTime < 200) { toggleState(); }
-        }, {passive: false});
+        // 点击切换
+        function toggle() {
+            isTree = !isTree;
+        }
+        
+        // 兼容触摸和点击
+        window.addEventListener('click', toggle);
+        window.addEventListener('touchstart', (e) => {
+             // 简单的触摸处理，防止与滑动冲突
+             if(e.changedTouches.length === 1 && Math.abs(e.changedTouches[0].clientX - lastX) < 5) {
+                 toggle();
+             }
+        });
 
-        // 滑动旋转逻辑
-        let targetRotY = 0; let lastX = 0;
+        // 滑动旋转
+        let lastX = 0;
+        let targetRotY = 0;
+        
+        window.addEventListener('touchstart', (e) => {
+            lastX = e.touches[0].clientX;
+        });
+        
         window.addEventListener('touchmove', (e) => {
+            const currentX = e.touches[0].clientX;
+            const delta = currentX - lastX;
+            targetRotY += delta * 0.01; // 旋转灵敏度
+            lastX = currentX;
             e.preventDefault(); // 防止页面滚动
-            // 【关键】增加了灵敏度 (0.008)
-            targetRotY += (e.touches[0].clientX - lastX) * 0.008; 
-            lastX = e.touches[0].clientX; 
-        }, {passive: false});
-        window.addEventListener('touchstart', (e) => { lastX = e.touches[0].clientX; }, {passive: false});
+        }, { passive: false });
 
-        // --- 6. 动画循环 ---
+        // 6. 动画循环
         function animate() {
             requestAnimationFrame(animate);
-            const target = isTreeForm ? 1 : 0;
-            progress += (target - progress) * 0.04; // 缓动切换
 
-            allDecos.forEach(mesh => {
-                mesh.position.lerpVectors(mesh.userData.posExplode, mesh.userData.posTree, progress);
-                mesh.rotation.x += mesh.userData.rotSpeed.x;
-                mesh.rotation.y += mesh.userData.rotSpeed.y;
-                mesh.rotation.z += mesh.userData.rotSpeed.z;
+            // 缓动切换
+            const target = isTree ? 1 : 0;
+            progress += (target - progress) * 0.05;
+
+            // 更新每个点
+            allMesh.forEach(m => {
+                m.position.lerpVectors(m.userData.posOpen, m.userData.posTree, progress);
+                m.rotation.x += m.userData.rotSpeed.x;
+                m.rotation.y += m.userData.rotSpeed.y;
             });
 
-            topStar.rotation.y += 0.02;
-            
-            // 旋转控制：基础慢转 + 手势控制
-            decosGroup.rotation.y += 0.001; 
-            decosGroup.rotation.y += (targetRotY - decosGroup.rotation.y) * 0.08; // 平滑跟随手势
+            // 旋转场景
+            group.rotation.y += 0.002; // 自动微转
+            group.rotation.y += (targetRotY - group.rotation.y) * 0.1; // 跟随手指
 
             renderer.render(scene, camera);
         }
         animate();
 
+        // 窗口适配
         window.addEventListener('resize', () => {
             camera.aspect = window.innerWidth / window.innerHeight;
             camera.updateProjectionMatrix();
